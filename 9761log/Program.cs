@@ -522,7 +522,9 @@ namespace _9761log
                     }
 
                     if (newMonth)
-                    {   // put last month file into archive     
+                    {   // put last month file into archive
+                        archiveFile(); 
+
                         // create a new 'lastMonth' file
                         File.Copy(thisMonthFile, lastMonthFile, true); // 'true' will overwrite previous version
                         Console.WriteLine("last month file updated");
