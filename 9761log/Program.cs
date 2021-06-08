@@ -14,7 +14,7 @@ namespace _9761log
 {
     class Program
     {
-        const bool supressUDPresponse = true;      // set to false to send a response
+        const bool supressUDPresponse = false;      // set to false to send a response
 
         const string logFile = "logCarBattery.csv";     // name of log file - must exist already to be used
         const string todayFile = "today.txt";           // name of web page include file
@@ -68,9 +68,10 @@ namespace _9761log
                 int input = Console.Read();
                 if ((input > 0) && (input != 10))
                 {
-                //    string str = "3, 5, 21, 6, 15, 1296, 326, 516, 316, 794, 1855, 0, 34, 35, 36, 37";
-                    Console.WriteLine("Received char " + input.ToString() + " Calling make monthFile");
-                    makeMonthFile();
+                   // string str = "1, 5, 21, 6, 15, 1296, 326, 516, 316, 794, 1855, 0, 34, 35, 36, 37";
+                    Console.WriteLine("Received char " + input.ToString() + " Calling test");
+                    updateWebPage("test");
+                 //   makeMonthFile();
                     //    String temp1 = makeSoilString(str);
                 }
             }
@@ -295,6 +296,13 @@ namespace _9761log
                 newDay = newMonth = false;
                 return false;
             }
+
+            if (Int16.Parse(values[CSV.DAY]) == 0)
+                return false;     // valid day can't be zero
+            if (Int16.Parse(values[CSV.MONTH]) == 0)
+                return false;     // valid month can't be zero
+            if (Int16.Parse(values[CSV.YEAR]) == 0)
+                return false;     // valid year can't be zero
 
             // check for repeat
             if ((Int16.Parse(values[CSV.DAY]) == Int16.Parse(oldValues[CSV.DAY])) &&
