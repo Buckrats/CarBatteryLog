@@ -3,6 +3,7 @@ using System.Text;
 using System.Net.Sockets;
 using System.Net;
 using System.IO;
+using System.Linq;
 
 namespace CarBatteryLog
 {
@@ -101,6 +102,11 @@ namespace CarBatteryLog
                     writer.WriteLine(csvString);
             }
         }
+        static void SendUdp(int srcPort, string dstIp, int dstPort, byte[] data)
+        {   // sends a udp packet
+            using (UdpClient c = new UdpClient(srcPort))
+                c.Send(data, data.Length, dstIp, dstPort);
+        }
 
         static string makePrintString(string csvData)
         {   // returns the formatted string         
@@ -137,6 +143,194 @@ namespace CarBatteryLog
 
             return result;
         }
+
+        static bool newDayNewMonthCheck(string csvData)
+        {   // returns false if a repeat or not valid, otherwise returns true and
+            // sets the flags newDay, New month, the value of gapCount and 
+            // sets up dayRecord string in case it is needed
+            if (!File.Exists(logFile))
+                return false;     // can't check last line if file does not exist!
+            // split the current values
+            string[] values = csvData.Split(',');
+
+            // get the last line of the csv file
+            string lastLine = File.ReadLines(@"logCarBattery.csv").Last();
+            string[] oldValues = lastLine.Split(',');
+            if (oldValues[0] == "")
+            {
+                Console.WriteLine("Last line of csv is blank");
+                newDay = newMonth = false;
+                return false;
+            }
+
+            if (Int16.Parse(values[CSV.DAY]) == 0)
+                return false;     // valid day can't be zero
+            if (Int16.Parse(values[CSV.MONTH]) == 0)
+                return false;     // valid month can't be zero
+            if (Int16.Parse(values[CSV.YEAR]) == 0)
+                return false;     // valid year can't be zero
+
+            // check for repeat
+            if ((Int16.Parse(values[CSV.DAY]) == Int16.Parse(oldValues[CSV.DAY])) &&
+                (Int16.Parse(values[CSV.MONTH]) == Int16.Parse(oldValues[CSV.MONTH])) &&
+                (Int16.Parse(values[CSV.YEAR]) == Int16.Parse(oldValues[CSV.YEAR])) &&
+                (Int16.Parse(values[CSV.HOUR]) == Int16.Parse(oldValues[CSV.HOUR])) &&
+                (Int16.Parse(values[CSV.MINUTE]) == Int16.Parse(oldValues[CSV.MINUTE]))
+                )
+            {   // repeat transmission, so return false
+                Console.WriteLine("Repeat transmission");
+                return false;
+            }
+
+            // set the new day and month flags by comparing the new values
+            // with the last line of the csv file
+            newDay = (Int16.Parse(values[CSV.DAY]) != Int16.Parse(oldValues[CSV.DAY]));
+            newMonth = (Int16.Parse(values[CSV.MONTH]) != Int16.Parse(oldValues[CSV.MONTH]));
+
+            if (newMonth)
+                newDay = true;          // new month must be new day, even if same day number!
+
+            //check for gap
+            if (newDay)
+            {   // just check minutes since midnight
+                gapCount = (Int16.Parse(values[CSV.HOUR]) * 60 + Int16.Parse(values[CSV.MINUTE])) / 15;
+            }
+            else
+            {   // not new day so compare current time to previous in csv file
+                gapCount = (Int16.Parse(values[CSV.HOUR]) * 60 + Int16.Parse(values[CSV.MINUTE]) -
+                            (Int16.Parse(oldValues[CSV.HOUR]) * 60 + Int16.Parse(oldValues[CSV.MINUTE]))) / 15;
+            }
+
+            if (gapCount > 1)
+                Console.WriteLine("Gap count = " + gapCount.ToString());
+
+            gapDay = Int16.Parse(values[CSV.GAP_DAY]) != 0;
+
+            if (gapDay)
+                Console.WriteLine("Gap day!");
+
+            // calculate the running average of solar charge
+            averagemAH = calculateAverage(Int16.Parse(values[CSV.DAY]));
+
+            if (newDay)
+            {   // set up the string for the day record
+                if (gapDay) // check if car has moved
+                    dayRecord = String.Format("* ");     // add marker to day record
+                else
+                    dayRecord = String.Format("");
+
+                dayRecord += String.Format("{0,2}/{1}/{2} ", oldValues[CSV.DAY], oldValues[CSV.MONTH].Trim(),
+                                          oldValues[CSV.YEAR].Trim());     // day/ month/ year
+                dayRecord += String.Format("Battery = {0:##.00}V ", Int16.Parse(oldValues[CSV.V1]) / 100.0);       // voltage
+                dayRecord += String.Format("Charge level = {0, 3}% ", calculatePercentage(Int16.Parse(oldValues[CSV.V1])));
+                dayRecord += String.Format("Peak Solar current = {0,6:0.0}mA, Solar charge = {1,4:####}mAH",
+                                            (Int16.Parse(oldValues[CSV.C1PEAK]) / 10.0), oldValues[CSV.mAH].ToString().Trim());
+
+                dayRecord += String.Format(" Running average = {0,4}mAH", averagemAH);
+
+                //   gapDay = false; // reset flag for new day        
+            }
+            return true; // show a new data point
+        }
+        static int calculateAverage(int today)
+        { // returns the average of the mAH for the last DAYS 
+            int average = 0;
+            string[] values = new string[15];
+            using (FileStream fs = new FileStream(@logFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                // start at next to last byte ( since last is typically a linefeed).
+                fs.Seek(0, SeekOrigin.End);
+                fs.Seek(-1, SeekOrigin.Current);
+
+                for (int i = 0; i < DAYS; i++)
+                {
+                    values = findPreviousDay(fs, today);
+                    if (values[0] == "")
+                    { // error reading csv file
+                        return 9999;        // flag error
+                    }
+
+                    today = Int16.Parse(values[CSV.DAY]);
+                    average += Int16.Parse(values[CSV.mAH]);
+                }
+            }
+            average = average / DAYS;
+            return average;
+        }
+        static string[] findPreviousDay(FileStream fs, int day)
+        {   // returns a string array of the values from the end of the previous day
+            string tempString = "";
+            string[] values = new string[15];
+            bool notFound = true;
+
+            while (notFound)
+            {
+                tempString = readLineBackwards(fs);
+                if (tempString == "")
+                {   // error reading csv file
+                    values[0] = "";  // flag the error
+                    return values;
+                }
+
+                values = tempString.Split(',');
+                if (Int16.Parse(values[CSV.DAY]) != day)
+                    notFound = false;
+            }
+            return values;
+        }
+        static string readLineBackwards(FileStream fs)
+        {   // returns a string containing the line
+            bool notFound = true;
+            const int DATA_SIZE = 100;
+            int count = DATA_SIZE;      // start at end of array
+            byte[] buffer = new byte[1];  // used to read each byte from file
+            byte[] data = new byte[DATA_SIZE + 1];
+            string tempString = "";
+
+            try
+            {
+                while (notFound)
+                {   // read backwards to a line feed
+                    fs.Seek(-1, SeekOrigin.Current);
+                    fs.Read(buffer, 0, 1);
+                    if (buffer[0] == '\n')
+                        notFound = false;
+                    else
+                        data[count--] = buffer[0]; // write into data array backwards
+
+                    fs.Seek(-1, SeekOrigin.Current); // fs.Read(...) advances the position, so we need to go back again
+                }
+                // create string from array, starting at last element written (count + 1)  
+                tempString = System.Text.Encoding.UTF8.GetString(data, count + 1, data.Length - count - 1);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                Console.WriteLine("Line too long in csv file...");
+            }
+
+            return tempString;   // string is null if there was an error in reading the file
+        }
+        static int calculatePercentage(int volts)
+        {    // calculates the % charge level for volts, using a quadratic function
+            if (volts > 1280)
+                return 100; // fully charged
+
+            double voltage = volts / 100.0;
+            double coeff2 = -0.8236;
+            double coeff1 = 21.471;
+            double coeff0 = -138.85;
+
+            double result = coeff2 * voltage * voltage + coeff1 * voltage + coeff0;
+
+            if (result > 1)
+                result = 1;
+            if (result < 0)
+                result = 0;
+
+            return (int)(100 * result);
+        }
+
         // end of class
     }
     // end of namespace

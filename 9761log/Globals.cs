@@ -29,8 +29,7 @@ namespace CarBatteryLog
         static string soilHeader = "";     // gets set in makeSoilString 
 
         static bool gapDay = false;         // set for a day if there is a gap in the record
-        static int gapCount = 0;            // the number of gaps in the current record 
-        const int MAX_GAP_COUNT = 3;        // how many gaps count as car being moved
+        static int gapCount = 0;            // the number of gaps in the current record    
 
         const int DAYS = 5;
         static int averagemAH = 0;
