@@ -14,7 +14,7 @@ namespace _9761log
 {
     class Program
     {
-        const bool supressUDPresponse = false;      // set to false to send a response
+        const bool supressUDPresponse = true;      // set to false to send a response
 
         const string logFile = "logCarBattery.csv";     // name of log file - must exist already to be used
         const string todayFile = "today.txt";           // name of web page include file
