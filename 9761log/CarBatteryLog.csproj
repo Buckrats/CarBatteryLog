@@ -73,8 +73,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Globals.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Soil.cs" />
+    <Compile Include="UDP.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="9761log_TemporaryKey.pfx" />

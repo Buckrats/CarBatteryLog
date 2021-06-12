@@ -1,51 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net.Sockets;
-using System.Net;
-using System.Timers;
-using System.Net.Mail;
 using System.IO;
-using Newtonsoft.Json;
 
-namespace _9761log
+namespace CarBatteryLog
 {
-    class Program
+    partial class Program
     {
         const bool supressUDPresponse = true;      // set to false to send a response
-
-        const string logFile = "logCarBattery.csv";     // name of log file - must exist already to be used
-        const string todayFile = "today.txt";           // name of web page include file
-        const string yesterdayFile = "yesterday.txt";   // name of web page include file
-        const string combinedFile = "combined.txt";      // name of web page include file
-        const string flashFile = "flashFile.txt";       // file that contains just the latest data
-        const string thisMonthFile = "thisMonth.txt";   // file that contains the charge data for this month
-        const string lastMonthFile = "lastMonth.txt";   // file that contains the charge data for last month
-      //  const string soilMonthFile = "soilMonth.txt";   // file that contains the soil data for this month
-        const string soilHeaderFile = "soilHeader.txt";   // file that contains the soil latest data
-        const string soilHistoryHeader = "soilHistoryHeader.txt"; // header file for the web page body
-        const string soilHistoryFile = "soilHistory.txt";   // file that contains the soil latest data
-        const int SOIL_LINES_COUNT_MAX = 24;            // maximum number of lines in the soil history file, 24 = one day
-        const string broadcastAddress = "255.255.255.255";
-
-        private const int listenPort1 = 40030;
-        private const int responsePort = 40031;
-        private const int currentPort = 40032;
-
-        static bool newDay = false;         // gets set in newDayNewMonthCheck 
-        static bool newMonth = false;       // gets set in newDayNewMonthCheck 
-        static string flashHeader = "";     // gets set in makePrintString 
-        static string dayRecord = "";       // gets set in newDayNewMonthCheck 
-        static string soilHeader = "";     // gets set in makeSoilString 
-
-        static bool gapDay = false;         // set for a day if there is a gap in the record
-        static int gapCount = 0;            // the number of gaps in the current record 
-        const int MAX_GAP_COUNT = 3;        // how many gaps count as car being moved
-
-        const int DAYS = 5;              
-        static int averagemAH = 0;  
 
         static void Main(string[] args)
         {
@@ -53,9 +15,7 @@ namespace _9761log
             // schedule the first receive operation:
             socket40030.BeginReceive(new AsyncCallback(OnUdpData40030), socket40030);
             UdpClient socket40032 = new UdpClient(currentPort); 
-            // schedule the first receive operation: STOPPED!
-     //       socket40032.BeginReceive(new AsyncCallback(OnUdpData40032), socket40032);
-
+  
             Console.WriteLine("Setup V1 complete");
 
             if (supressUDPresponse)
@@ -76,207 +36,8 @@ namespace _9761log
                 }
             }
         }
-        static void OnUdpData40030(IAsyncResult result)
-        {   // callback for udp data
-            UdpClient socket = result.AsyncState as UdpClient;
-            // points towards whoever had sent the message:
-            IPEndPoint source = new IPEndPoint(0, 0);
+             
 
-            try
-            {   // get the actual message and fill out the source:
-                byte[] message = socket.EndReceive(result, ref source);    
-            
-                // convert to string
-                var str = System.Text.Encoding.Default.GetString(message);
-
-                // check for new day and new month, the value of gapCount and set the dayRecord string in case it is needed
-                if (newDayNewMonthCheck(str)) 
-                {   // not a repeat, so write raw data to the CSV log file
-                    log(str);
-
-                    // add latest row to web page
-                    String temp = makePrintString(str);
-                    String temp1 = makeSoilString(str); // create the soil moisture strings
-                    updateWebPage(temp);
-                    // write a formatted version to console
-                    Console.WriteLine(temp + temp1);                    
-                }
-                // send a response to show received
-                if (!supressUDPresponse)
-                    SendUdp(responsePort, broadcastAddress, responsePort, Encoding.ASCII.GetBytes("Cstring"));
-
-                // schedule the next receive operation once reading is done:
-                socket.BeginReceive(new AsyncCallback(OnUdpData40030), socket);
-            }
-            catch (Exception e)
-            {
-
-                Console.WriteLine("UDP Rx error: " + e.Message);
-                // schedule the next receive operation:
-                socket.BeginReceive(new AsyncCallback(OnUdpData40030), socket);
-            }
-}
-        static void OnUdpData40032(IAsyncResult result)
-        {   // callback for udp csv data from current monitor
-         
-            // this is what had been passed into BeginReceive as the second parameter:
-            UdpClient socket = result.AsyncState as UdpClient;
-            // points towards whoever had sent the message:
-            IPEndPoint source = new IPEndPoint(0, 0);
-            // get the actual message and fill out the source:
-            byte[] message = socket.EndReceive(result, ref source);
-                    
-            // convert to string
-            var str = System.Text.Encoding.Default.GetString(message);
-        //    Console.WriteLine("CSV message=" + str);
-            
-            // convert to string array for display
-            string[] values = str.Split(',');
-
-            // create the result string
-            string resultString = String.Format("{0,2}/{1}/{2} ", values[current.DAY], values[current.MONTH].Trim(),
-                                            values[current.YEAR].Trim());     // day/ month/ year
-            if (Int16.Parse(values[current.MONTH]) < 10)    // check months, add space if necessary
-                resultString += " ";
-            resultString += String.Format("{0,2}:", values[current.HOUR].Trim()); // hours
-            resultString += String.Format("{0:00}", Int16.Parse(values[current.MINUTE])); // minutes            
-            resultString += String.Format(" {0:##.00}V ", (Int16.Parse(values[current.V1]) / 100.0));
-            resultString += String.Format(" {0:##.0}mA", 
-                                 (Int16.Parse(values[current.Current + Int16.Parse(values[current.COUNT]) - 1]) / 10.0));
-
-            Console.WriteLine(resultString);
-            
-            saveCurrentCSV(values, str);
-
-            // schedule the next receive operation once reading is done:
-            socket.BeginReceive(new AsyncCallback(OnUdpData40032), socket);
-        }
-        static void saveCurrentCSV(string[] values, string csvString)
-        {        
-            string filename = String.Format("{0:D2}{1}{2:D2}.csv", values[current.YEAR].Trim(), 
-                                        Int16.Parse(values[current.MONTH]).ToString("00").Trim(),
-                                        Int16.Parse(values[current.DAY]).ToString("00").Trim());            
-
-            if (File.Exists(filename))
-            { // add the new data
-                using (StreamWriter writer = File.AppendText(filename)) 
-                    writer.WriteLine(csvString);
-            }
-            else
-            {// create a new day file
-                using (StreamWriter writer = File.CreateText(filename))                  
-                    writer.WriteLine(csvString);
-            }
-        }
-
-        static string makePrintString(string csvData)
-        {   // returns the formatted string         
-            string[] values = csvData.Split(',');
-
-            // start the flash header string
-            flashHeader = "at ";
-
-            // create the result string    
-            string result = String.Format("{0,2}/{1}/{2} ", values[CSV.DAY], values[CSV.MONTH].Trim(), 
-                                            values[CSV.YEAR].Trim() );     // day/ month/ year
-            if (Int16.Parse(values[CSV.MONTH]) < 10)    // check months, add space if necessary
-                result += " ";
-            result += String.Format("{0,2}:", values[CSV.HOUR].Trim()); // hours
-            result += String.Format("{0:00}", Int16.Parse(values[CSV.MINUTE])); // minutes
-            // add the date and time to flashheader string
-            flashHeader += result;  
-            // complete the result string
-            result += String.Format(" {0:##.00}V ", (Int16.Parse(values[CSV.V1]) / 100.0)); //  voltage
-
-            result += String.Format("{0,6:0.0}mA", (Int16.Parse(values[CSV.C1]) / 10.0));  // current
-            result += String.Format(" {0,4:####}mAH", values[CSV.mAH].ToString().Trim());
-
-            // calculate the running average of solar charge
-            averagemAH = calculateAverage(Int16.Parse(values[CSV.DAY]));
-
-            // complete the flash header string
-            flashHeader += String.Format("</br>Battery voltage = {0:##.00}V", (Int16.Parse(values[CSV.V1]) / 100.0));
-            flashHeader += String.Format(" Charge level = {0}%", calculatePercentage( Int16.Parse(values[CSV.V1])));
-            flashHeader += String.Format("</br>Solar current = {0,6:0.0}mA", (Int16.Parse(values[CSV.C1]) / 10.0));            
-            flashHeader += String.Format(" Peak Solar current = {0,6:0.0}mA", (Int16.Parse(values[CSV.C1PEAK]) / 10.0));
-            flashHeader += String.Format("</br>Today's charge = {0,4:####}mAH", values[CSV.mAH].ToString().Trim());
-            flashHeader += String.Format(" Running average over " + DAYS.ToString() + " days = " + averagemAH.ToString() + "mAH");
-
-            return result; 
-        }
-
-        static string makeSoilString(string csvData)
-        {   // returns the formatted string         
-            string[] values = csvData.Split(',');
-
-            // create the soil header string
-            soilHeader = String.Format("at {0,2}/{1}/{2} ", values[CSV.DAY], values[CSV.MONTH].Trim(),
-                                            values[CSV.YEAR].Trim());     // day/ month/ year
-            if (Int16.Parse(values[CSV.MONTH]) < 10)    // check months, add space if necessary
-                soilHeader += " ";
-            soilHeader += String.Format("{0,2}:", values[CSV.HOUR].Trim()); // hours
-            soilHeader += String.Format("{0:00}", Int16.Parse(values[CSV.MINUTE])); // minutes 
-                  
-            string[] unitNames = new string[5];
-
-            try
-            {   // get the plant tub names   
-                unitNames = File.ReadAllLines(@"unitNames.txt");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Tub name error: " + e.Message);
-            }
-
-            soilHeader += String.Format(" <table>");
-
-            soilHeader += String.Format("<tr><td> {0}:</td> ", unitNames[0]);
-            soilHeader += String.Format("<td> Moisture = {0}%</td></tr>", Int16.Parse(values[CSV.SOIL1]));
-                      
-            soilHeader += String.Format("<tr><td> {0}:</td> ", unitNames[1]);
-            soilHeader += String.Format(" <td>Moisture = {0}%</td></tr>", Int16.Parse(values[CSV.SOIL2]));
-          
-            soilHeader += String.Format("<tr><td> {0}:</td> ", unitNames[2]);
-            soilHeader += String.Format("<td> Moisture = {0}%</td></tr>", Int16.Parse(values[CSV.SOIL3]));
-         
-            soilHeader += String.Format("<tr><td> {0}:</td> ", unitNames[3]);
-            soilHeader += String.Format("<td> Moisture = {0}%</td></tr>", Int16.Parse(values[CSV.SOIL4]));
-            soilHeader += String.Format("</table>");
-
-            // add data to soil history file if quarter to hour
-            if (Int16.Parse(values[CSV.MINUTE]) == 45)
-            {
-                try
-                {   // check number of lines in file
-                    var lines = File.ReadAllLines(@soilHistoryFile);
-                    if (lines.Count() >= SOIL_LINES_COUNT_MAX)
-                    {  // need to remove first line to maintain size of file
-                        File.WriteAllLines(@soilHistoryFile, lines.Skip(1).ToArray());
-                    }
-
-                    string header = String.Format("<tr><th width =\"10%\">Date</th ><th width =\"10%\">{0}</th >" +
-                        "<th width = \"10%\">{1}</th ><th width = \"10%\">{2}</th ><th width =\"10%\" >{3}</th ></tr >",
-                        unitNames[0], unitNames[1], unitNames[2], unitNames[3]);
-                    File.WriteAllText(soilHistoryHeader, header);
-
-                    string temp = String.Format("<tr><td>{0:00}/{1:00}/{2}  {3:00}:{4:00}<td>{5}%</td><td>{6}%</td><td>{7}%</td><td>{8}%</td></tr>",
-                        values[CSV.DAY], values[CSV.MONTH].Trim(), values[CSV.YEAR].Trim(),
-                        values[CSV.HOUR].Trim(), Int16.Parse(values[CSV.MINUTE]),
-                        Int16.Parse(values[CSV.SOIL1]), Int16.Parse(values[CSV.SOIL2]),
-                        Int16.Parse(values[CSV.SOIL3]), Int16.Parse(values[CSV.SOIL4])
-                        );
-                    File.AppendAllText(@soilHistoryFile, temp + Environment.NewLine);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("soil history error: " + e.Message);
-                }
-            }
-
-            // complete the result string
-            string result = String.Format(" {0:##}% ", Int16.Parse(values[CSV.SOIL1])); //  moisture
-            return result;
-        }
 
         static bool newDayNewMonthCheck(string csvData)
         {   // returns false if a repeat or not valid, otherwise returns true and
@@ -739,42 +500,5 @@ static void combineTodayandYesterday()
         }
 
         // end of class: Program
-    }
-
-    public static class CSV
-    {
-        public const int DAY = 0;
-        public const int MONTH = 1;
-        public const int YEAR = 2;
-        public const int HOUR= 3;
-        public const int MINUTE = 4;
-        public const int V1 = 5;
-        public const int V2 = 6;
-        public const int V3 = 7;
-        public const int C1 = 8;
-        public const int mAH = 9;
-        public const int C1PEAK = 10;
-        public const int GAP_DAY = 11;
-        public const int SOIL1 = 12;
-        public const int SOIL2 = 13;
-        public const int SOIL3 = 14;
-        public const int SOIL4 = 15;
-        public const int SOIL5 = 16;
-        public const int SOIL6 = 17;
-        public const int SOIL7 = 18;
-    }
-    public static class current
-    {
-        public const int DAY = 0;
-        public const int MONTH = 1;
-        public const int YEAR = 2;
-        public const int HOUR = 3;
-        public const int MINUTE = 4;
-        public const int COUNT = 5;
-        public const int V1 = 6;
-        public const int V2 = 7;
-        public const int V3 = 8;
-        public const int mAH = 9;
-        public const int Current = 10;
     }
 }
