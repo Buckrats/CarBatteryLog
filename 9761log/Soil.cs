@@ -45,7 +45,7 @@ namespace CarBatteryLog
             soilHeader += String.Format("</table>");
 
             // add data to soil history file if quarter to hour
-            if (Int16.Parse(values[CSV.MINUTE]) == 45)
+            if (Int16.Parse(values[CSV.MINUTE]) >= 45)
             {
                 try
                 {   // check number of lines in file
