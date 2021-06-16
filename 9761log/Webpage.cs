@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 
 namespace CarBatteryLog
 {
@@ -71,12 +72,13 @@ namespace CarBatteryLog
 
         private static void updateLastMonthFile()
         {
-            // first, put last month file into archive
+            // put last month file into archive
             archiveFile();
 
-            // then, create a new 'lastMonth' file
+            // create a new 'lastMonth' file
             File.Copy(thisMonthFile, lastMonthFile, true); // 'true' will overwrite previous version
             Console.WriteLine("last month file updated");
+
             // empty thisMonth file for new month
             using (StreamWriter writer = File.CreateText(thisMonthFile))
             {
@@ -190,6 +192,100 @@ namespace CarBatteryLog
                 }
             }
         }
+
+        static void updateThisMonthFile(String[] values)
+        {
+            int tubCount = getUnitNames();         
+
+            string dayLine = createDayLineString(values, tubCount);  // formats the values for the day into a string
+
+            try
+            {   // append the line to the 'this month' file
+                using (StreamWriter writer = File.AppendText(directory + thisMonthFile))
+                {
+                    writer.WriteLine(dayLine);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("This month file error: " + e.Message);
+            }
+        }
+
+        private static int getUnitNames()
+        {   // updates unitNames array, and returns how many names found
+            try
+            {   // get the plant tub names   
+                unitNames = File.ReadAllLines(@"unitNames.txt");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Tub name error: " + e.Message);
+            }
+
+            int tubCount = unitNames.Count(s => s != null);     // count the number of tub names in the file
+            return tubCount;
+        }
+
+        private static string createHeaderLineString(int tubCount)
+        {
+            String headerLine = String.Format("<tr><th width =\"5 % \">Date</th ><th width =\"5 % \">Car Moved</th ><th width =\"5 % \">Battery Voltage </th>");
+            headerLine += String.Format("<th width = \"5 % \">Charge State</th><th width = \"5 % \">Peak Solar Current</th>");
+            headerLine += String.Format("<th width =\"5 % \" >Day's Charge</th><th width =\"5 % \" >Average Charge</th>");
+
+            for (int i = 0; i < tubCount; i++)
+                headerLine += String.Format("<th width =\"5 % \" >{0}</th >", unitNames[i]);
+            return headerLine;
+        }
+
+        private static string createDayLineString(string[] values, int tubCount)
+        {
+            String dayLine;
+            String movedString = "";
+            if (gapDay)
+                movedString = "Yes";
+
+            dayLine = String.Format("<tr><td>{0,2}/{1}/{2}</td> ", values[CSV.DAY], values[CSV.MONTH].Trim(),
+                                          values[CSV.YEAR].Trim());     // day/ month/ year
+            dayLine += String.Format("<td>{0}</td>", movedString);
+            dayLine += String.Format("<td>{0:##.00}V</td> ", Int16.Parse(values[CSV.V1]) / 100.0);       // voltage
+            dayLine += String.Format("<td>{0, 3}%</td> ", calculatePercentage(Int16.Parse(values[CSV.V1])));
+            dayLine += String.Format("<td>{0,6:0.0}mA</td><td>{1,4:####}mAH</td>",
+                                        (Int16.Parse(values[CSV.C1PEAK]) / 10.0), values[CSV.mAH].ToString().Trim());
+            dayLine += String.Format("<td>{0,4}mAH</td>", averagemAH);
+
+            for(int i = 0; i < tubCount; i++)
+                dayLine += String.Format("<td>{0,3}%</td>", Int16.Parse(values[CSV.SOIL1 + i]));
+
+            return dayLine;
+        }
+
+        private static void createNewThisMonthFile()
+        {
+            int tubCount = getUnitNames();      // update the unit names array, and find how many there are
+
+            string headerLine = createHeaderLineString(tubCount); // puts the tub names into a string for the table header
+
+            using (StreamWriter writer = File.CreateText(directory + "thisMonth.txt"))
+            {
+                writer.WriteLine(headerLine);
+            }
+        }
+
+        private static void addLineToMonthFile()
+        {
+            // get the last line of the csv file
+            string lastLine = File.ReadLines(@"logCarBattery.csv").Last();
+            string[] oldValues = lastLine.Split(',');
+            if (oldValues[0] == "")
+            {
+                Console.WriteLine("Last line of csv is blank");
+                newDay = newMonth = false;
+                return;
+            }
+            updateThisMonthFile(oldValues);
+        }
+
         // end of class
     }
     // end of namespace

@@ -16,9 +16,7 @@ namespace CarBatteryLog
             if (Int16.Parse(values[CSV.MONTH]) < 10)    // check months, add space if necessary
                 soilHeader += " ";
             soilHeader += String.Format("{0,2}:", values[CSV.HOUR].Trim()); // hours
-            soilHeader += String.Format("{0:00}", Int16.Parse(values[CSV.MINUTE])); // minutes 
-
-            string[] unitNames = new string[5];
+            soilHeader += String.Format("{0:00}", Int16.Parse(values[CSV.MINUTE])); // minutes            
 
             try
             {   // get the plant tub names   

@@ -7,6 +7,7 @@ namespace CarBatteryLog
     partial class Program
     {
         const bool supressUDPresponse = true;      // set to false to send a response
+        const string version = "2";
 
         static void Main()
         {
@@ -15,7 +16,7 @@ namespace CarBatteryLog
             socket40030.BeginReceive(new AsyncCallback(OnUdpData40030), socket40030);
             UdpClient socket40032 = new UdpClient(currentPort); 
   
-            Console.WriteLine("Setup V2 complete");
+            Console.WriteLine("Setup V" + version + " complete");
 
             if (supressUDPresponse)
                 Console.WriteLine("UDP response supressed!");
@@ -26,11 +27,11 @@ namespace CarBatteryLog
                 System.Threading.Thread.Sleep(100); //don't use all the cpu time
                 int input = Console.Read();
                 if ((input > 0) && (input != 10))
-                {   // used for testing only 
+                {   // normally used for testing only 
                    // string str = "1, 5, 21, 6, 15, 1296, 326, 516, 316, 794, 1855, 0, 34, 35, 36, 37";
-                    Console.WriteLine("Received char " + input.ToString() + " Calling test");
-                    updateWebPage("test");                 
-                    //    String temp1 = makeSoilString(str);
+                    Console.WriteLine("Received char " + input.ToString() + " version " + version);
+
+                    addLineToMonthFile();
                 }
             }
         }     

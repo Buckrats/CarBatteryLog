@@ -187,10 +187,12 @@ namespace CarBatteryLog
             newDay = (Int16.Parse(values[CSV.DAY]) != Int16.Parse(oldValues[CSV.DAY]));
             newMonth = (Int16.Parse(values[CSV.MONTH]) != Int16.Parse(oldValues[CSV.MONTH]));
 
-            if (newMonth)
+            if (newMonth) 
                 newDay = true;          // new month must be new day, even if same day number!
+                                        
+            averagemAH = calculateAverage(Int16.Parse(values[CSV.DAY]));
 
-            //check for gap
+            //check for gap due to car data not being received
             if (newDay)
             {   // just check minutes since midnight
                 gapCount = (Int16.Parse(values[CSV.HOUR]) * 60 + Int16.Parse(values[CSV.MINUTE])) / 15;
@@ -207,10 +209,7 @@ namespace CarBatteryLog
             gapDay = Int16.Parse(values[CSV.GAP_DAY]) != 0;
 
             if (gapDay)
-                Console.WriteLine("Gap day!");
-
-            // calculate the running average of solar charge
-            averagemAH = calculateAverage(Int16.Parse(values[CSV.DAY]));
+                Console.WriteLine("Gap day!");  
 
             if (newDay)
             {   // set up the string for the day record
@@ -227,6 +226,8 @@ namespace CarBatteryLog
                                             (Int16.Parse(oldValues[CSV.C1PEAK]) / 10.0), oldValues[CSV.mAH].ToString().Trim());
 
                 dayRecord += String.Format(" Running average = {0,4}mAH", averagemAH);
+
+                updateThisMonthFile(oldValues);
 
                 //   gapDay = false; // reset flag for new day        
             }
