@@ -20,8 +20,8 @@ namespace CarBatteryLog
                     // create a new today file
                     createNewTodayFile(message);
 
-                    // update the thismonth file with yesterday's data
-                    updateThisMonthFile();
+                    // thismonth file updated with yesterday's data in newDayNewMonthCheck
+                    //          updateThisMonthFile();
 
                     if (newMonth)
                         updateLastMonthFile();
@@ -76,17 +76,19 @@ namespace CarBatteryLog
             archiveFile();
 
             // create a new 'lastMonth' file
-            File.Copy(thisMonthFile, lastMonthFile, true); // 'true' will overwrite previous version
+            File.Copy(directory + thisMonthFile, directory + lastMonthFile, true); // 'true' will overwrite previous version
             Console.WriteLine("last month file updated");
 
-            // empty thisMonth file for new month
+            createNewThisMonthFile();       // creates an empty file with just the header line
+
+   /*         // empty thisMonth file for new month
             using (StreamWriter writer = File.CreateText(thisMonthFile))
             {
                 writer.WriteLine("");
-            }
+            }*/
         }
 
-        private static void updateThisMonthFile()
+   /*     private static void updateThisMonthFile()
         {   // adds yesterday's record to this month file
             if (File.Exists(thisMonthFile))
             {
@@ -95,10 +97,10 @@ namespace CarBatteryLog
                     writer.WriteLine(dayRecord);
                 }
             }
-        }
+        }*/
 
         private static void createNewTodayFile(string message)
-        {   // creates a new today file, empty if at modnight, or with * lines if not
+        {   // creates a new today file, empty if at midnight, or with * lines if not
             using (StreamWriter writer = File.CreateText(todayFile))
             {
                 writer.WriteLine();     // blank line to start
@@ -137,26 +139,13 @@ namespace CarBatteryLog
 
         static void archiveFile()
         {   // copies lastMonthFile into a file called YYMM.txt
-            // create the filename
-            string[] archiveData = File.ReadAllLines(lastMonthFile);
-            int i = -1;
-            try
-            {   // find the first line with data
-                while (archiveData[++i] == "") ;
-
-                // get the date 
-                string[] date = archiveData[i].Split(' ');
-                // split the date
-                string[] values = date[1].Split('/');
-
-                string archiveFile = values[2];
-                if (Int16.Parse(values[1]) < 10)
-                    archiveFile = archiveFile + "0";
-
-                archiveFile = archiveFile + values[1] + ".txt";
-                Console.WriteLine("Archive filename = " + archiveFile);
-
-                File.Copy(lastMonthFile, archiveFile, true); // 'true' will overwrite previous version
+            // create the filename               
+            string archiveFileName = (DateTime.Now.AddMonths(-1).Year % 100).ToString("00") 
+                                    + DateTime.Now.AddMonths(-1).Month.ToString("00") + ".txt";
+            try 
+            {      
+                File.Copy(lastMonthFile, archiveFileName, true); // 'true' will overwrite previous version
+                Console.WriteLine("Archive file " + archiveFileName + " created.");
             }
             catch (Exception exp)
             {
@@ -266,7 +255,7 @@ namespace CarBatteryLog
 
             string headerLine = createHeaderLineString(tubCount); // puts the tub names into a string for the table header
 
-            using (StreamWriter writer = File.CreateText(directory + "thisMonth.txt"))
+            using (StreamWriter writer = File.CreateText(directory + thisMonthFile))
             {
                 writer.WriteLine(headerLine);
             }

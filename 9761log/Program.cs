@@ -31,7 +31,7 @@ namespace CarBatteryLog
                    // string str = "1, 5, 21, 6, 15, 1296, 326, 516, 316, 794, 1855, 0, 34, 35, 36, 37";
                     Console.WriteLine("Received char " + input.ToString() + " version " + version);
 
-                    addLineToMonthFile();
+                    archiveFile();
                 }
             }
         }     

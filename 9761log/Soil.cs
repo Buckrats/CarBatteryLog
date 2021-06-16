@@ -6,7 +6,7 @@ namespace CarBatteryLog
 {
     partial class Program
     {
-        static string makeSoilString(string csvData)
+        static string makeSoilStringAndAddToFile(string csvData)
         {   // returns the formatted string         
             string[] values = csvData.Split(',');
 

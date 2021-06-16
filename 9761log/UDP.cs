@@ -28,11 +28,11 @@ namespace CarBatteryLog
                     log(str);
 
                     // add latest row to web page
-                    String temp = makePrintString(str);
-                    String temp1 = makeSoilString(str); // create the soil moisture strings
-                    updateWebPage(temp);
+                    String dataLineString = makePrintString(str);
+                    String soilLineString = makeSoilStringAndAddToFile(str); // create the soil moisture strings
+                    updateWebPage(dataLineString);
                     // write a formatted version to console
-                    Console.WriteLine(temp + temp1);
+                    Console.WriteLine(dataLineString + soilLineString);
                 }
                 // send a response to show received
                 if (!supressUDPresponse)
@@ -109,7 +109,7 @@ namespace CarBatteryLog
         }
 
         static string makePrintString(string csvData)
-        {   // returns the formatted string         
+        {   // returns a formatted string from the latest csv data       
             string[] values = csvData.Split(',');
 
             // start the flash header string
@@ -227,9 +227,7 @@ namespace CarBatteryLog
 
                 dayRecord += String.Format(" Running average = {0,4}mAH", averagemAH);
 
-                updateThisMonthFile(oldValues);
-
-                //   gapDay = false; // reset flag for new day        
+                updateThisMonthFile(oldValues);                      
             }
             return true; // show a new data point
         }
