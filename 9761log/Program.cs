@@ -6,15 +6,14 @@ namespace CarBatteryLog
 {
     partial class Program
     {
-        const bool supressUDPresponse = true;      // set to false to send a response
-        const string version = "2";
+        const bool supressUDPresponse = true;      // set to true for testing to stop UDP response duplication
+        const string version = "3";
 
         static void Main()
         {
             UdpClient socket40030 = new UdpClient(listenPort1); // `new UdpClient()` to auto-pick port
             // schedule the first receive operation:
             socket40030.BeginReceive(new AsyncCallback(OnUdpData40030), socket40030);
-            UdpClient socket40032 = new UdpClient(currentPort); 
   
             Console.WriteLine("Setup V" + version + " complete");
 
@@ -31,7 +30,7 @@ namespace CarBatteryLog
                    // string str = "1, 5, 21, 6, 15, 1296, 326, 516, 316, 794, 1855, 0, 34, 35, 36, 37";
                     Console.WriteLine("Received char " + input.ToString() + " version " + version);
 
-                    archiveFile();
+                    
                 }
             }
         }     

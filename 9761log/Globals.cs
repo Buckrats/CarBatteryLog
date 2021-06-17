@@ -6,7 +6,6 @@ namespace CarBatteryLog
     {
         private const int listenPort1 = 40030;
         private const int responsePort = 40031;
-        private const int currentPort = 40032;
 
         const string directory = ""; // N:/CarBatteryLog/temp/";
         const string logFile = "logCarBattery.csv";     // name of log file - must exist already to be used
@@ -16,8 +15,6 @@ namespace CarBatteryLog
         const string flashFile = "flashFile.txt";       // file that contains just the latest data
         const string thisMonthFile = "thisMonth.txt";   // file that contains the charge data for this month
         const string lastMonthFile = "lastMonth.txt";   // file that contains the charge data for last month
-        const string thisMonthHeaderFile = directory + "thisMonthHeader.txt"; // table header for this month page
-                                                        //  const string soilMonthFile = "soilMonth.txt";   // file that contains the soil data for this month
         const string soilHeaderFile = "soilHeader.txt";   // file that contains the soil latest data
         const string soilHistoryHeader = "soilHistoryHeader.txt"; // header file for the web page body
         const string soilHistoryFile = "soilHistory.txt";   // file that contains the soil latest data
@@ -26,11 +23,11 @@ namespace CarBatteryLog
 
         static bool newDay = false;         // gets set in newDayNewMonthCheck 
         static bool newMonth = false;       // gets set in newDayNewMonthCheck 
-        static string flashHeader = "";     // gets set in makePrintString 
-        static string dayRecord = "";       // gets set in newDayNewMonthCheck 
+        static string flashHeader = "";     // gets set in makePrintString    
         static string soilHeader = "";     // gets set in makeSoilString 
-        const int noOfUnits = 5;            // the number of soil monitoring units
-        static string[] unitNames = new string[noOfUnits + 1];
+        const int maxNoOfUnits = 8;            // the maximum number of soil monitoring units
+        static string[] unitNames = new string[maxNoOfUnits + 1];
+        static string[] oldValues;
 
         static bool gapDay = false;         // set for a day if there is a gap in the record
         static int gapCount = 0;            // the number of gaps in the current record    

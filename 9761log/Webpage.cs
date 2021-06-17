@@ -80,24 +80,7 @@ namespace CarBatteryLog
             Console.WriteLine("last month file updated");
 
             createNewThisMonthFile();       // creates an empty file with just the header line
-
-   /*         // empty thisMonth file for new month
-            using (StreamWriter writer = File.CreateText(thisMonthFile))
-            {
-                writer.WriteLine("");
-            }*/
         }
-
-   /*     private static void updateThisMonthFile()
-        {   // adds yesterday's record to this month file
-            if (File.Exists(thisMonthFile))
-            {
-                using (StreamWriter writer = File.AppendText(thisMonthFile))
-                {
-                    writer.WriteLine(dayRecord);
-                }
-            }
-        }*/
 
         private static void createNewTodayFile(string message)
         {   // creates a new today file, empty if at midnight, or with * lines if not

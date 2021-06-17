@@ -19,20 +19,24 @@ namespace CarBatteryLog
             {   // get the actual message and fill out the source:
                 byte[] message = socket.EndReceive(result, ref source);
 
-                // convert to string
-                var str = System.Text.Encoding.Default.GetString(message);
+                // convert to string then split to get the current values
+                var csvData = System.Text.Encoding.Default.GetString(message);                
+                string[] values = csvData.Split(',');
 
-                // check for new day and new month, the value of gapCount and set the dayRecord string in case it is needed
-                if (newDayNewMonthCheck(str))
+                // check for new day and new month, set gapCount and update oldValues
+                if (newDayNewMonthCheck(values))
                 {   // not a repeat, so write raw data to the CSV log file
-                    log(str);
+                    log(csvData);
+
+                    if (newDay)
+                        updateThisMonthFile(oldValues);
 
                     // add latest row to web page
-                    String dataLineString = makePrintString(str);
-                    String soilLineString = makeSoilStringAndAddToFile(str); // create the soil moisture strings
+                    String dataLineString = makePrintString(values);
+                    makeSoilStringAndAddToFile(values); // create the soil moisture strings
                     updateWebPage(dataLineString);
                     // write a formatted version to console
-                    Console.WriteLine(dataLineString + soilLineString);
+                    Console.WriteLine(dataLineString);
                 }
                 // send a response to show received
                 if (!supressUDPresponse)
@@ -43,74 +47,19 @@ namespace CarBatteryLog
             }
             catch (Exception e)
             {
-
                 Console.WriteLine("UDP Rx error: " + e.Message);
                 // schedule the next receive operation:
                 socket.BeginReceive(new AsyncCallback(OnUdpData40030), socket);
             }
-        }
-        static void OnUdpData40032(IAsyncResult result)
-        {   // callback for udp csv data from current monitor
-
-            // this is what had been passed into BeginReceive as the second parameter:
-            UdpClient socket = result.AsyncState as UdpClient;
-            // points towards whoever had sent the message:
-            IPEndPoint source = new IPEndPoint(0, 0);
-            // get the actual message and fill out the source:
-            byte[] message = socket.EndReceive(result, ref source);
-
-            // convert to string
-            var str = System.Text.Encoding.Default.GetString(message);
-            //    Console.WriteLine("CSV message=" + str);
-
-            // convert to string array for display
-            string[] values = str.Split(',');
-
-            // create the result string
-            string resultString = String.Format("{0,2}/{1}/{2} ", values[current.DAY], values[current.MONTH].Trim(),
-                                            values[current.YEAR].Trim());     // day/ month/ year
-            if (Int16.Parse(values[current.MONTH]) < 10)    // check months, add space if necessary
-                resultString += " ";
-            resultString += String.Format("{0,2}:", values[current.HOUR].Trim()); // hours
-            resultString += String.Format("{0:00}", Int16.Parse(values[current.MINUTE])); // minutes            
-            resultString += String.Format(" {0:##.00}V ", (Int16.Parse(values[current.V1]) / 100.0));
-            resultString += String.Format(" {0:##.0}mA",
-                                 (Int16.Parse(values[current.Current + Int16.Parse(values[current.COUNT]) - 1]) / 10.0));
-
-            Console.WriteLine(resultString);
-
-            saveCurrentCSV(values, str);
-
-            // schedule the next receive operation once reading is done:
-            socket.BeginReceive(new AsyncCallback(OnUdpData40032), socket);
-        }
-
-        static void saveCurrentCSV(string[] values, string csvString)
-        {
-            string filename = String.Format("{0:D2}{1}{2:D2}.csv", values[current.YEAR].Trim(),
-                                        Int16.Parse(values[current.MONTH]).ToString("00").Trim(),
-                                        Int16.Parse(values[current.DAY]).ToString("00").Trim());
-
-            if (File.Exists(filename))
-            { // add the new data
-                using (StreamWriter writer = File.AppendText(filename))
-                    writer.WriteLine(csvString);
-            }
-            else
-            {// create a new day file
-                using (StreamWriter writer = File.CreateText(filename))
-                    writer.WriteLine(csvString);
-            }
-        }
+        }     
         static void SendUdp(int srcPort, string dstIp, int dstPort, byte[] data)
         {   // sends a udp packet
             using (UdpClient c = new UdpClient(srcPort))
                 c.Send(data, data.Length, dstIp, dstPort);
         }
 
-        static string makePrintString(string csvData)
+        static string makePrintString(string[] values)
         {   // returns a formatted string from the latest csv data       
-            string[] values = csvData.Split(',');
 
             // start the flash header string
             flashHeader = "at ";
@@ -144,18 +93,19 @@ namespace CarBatteryLog
             return result;
         }
 
-        static bool newDayNewMonthCheck(string csvData)
+        static bool newDayNewMonthCheck(string[] values)
         {   // returns false if a repeat or not valid, otherwise returns true and
             // sets the flags newDay, New month, the value of gapCount and 
-            // sets up dayRecord string in case it is needed
+            // updates the thisMonth file if newDay
             if (!File.Exists(logFile))
                 return false;     // can't check last line if file does not exist!
-            // split the current values
-            string[] values = csvData.Split(',');
+ 
+            if (Int16.Parse(values[CSV.DAY]) * Int16.Parse(values[CSV.MONTH]) * Int16.Parse(values[CSV.YEAR]) == 0)
+                return false;     // valid day month or year can't be zero
 
             // get the last line of the csv file
-            string lastLine = File.ReadLines(@"logCarBattery.csv").Last();
-            string[] oldValues = lastLine.Split(',');
+            string lastLine = File.ReadLines(@"logCarBattery.csv").Last();         
+            oldValues = lastLine.Split(',');       // also used to update thisMonth file
             if (oldValues[0] == "")
             {
                 Console.WriteLine("Last line of csv is blank");
@@ -163,36 +113,27 @@ namespace CarBatteryLog
                 return false;
             }
 
-            if (Int16.Parse(values[CSV.DAY]) == 0)
-                return false;     // valid day can't be zero
-            if (Int16.Parse(values[CSV.MONTH]) == 0)
-                return false;     // valid month can't be zero
-            if (Int16.Parse(values[CSV.YEAR]) == 0)
-                return false;     // valid year can't be zero
-
             // check for repeat
-            if ((Int16.Parse(values[CSV.DAY]) == Int16.Parse(oldValues[CSV.DAY])) &&
-                (Int16.Parse(values[CSV.MONTH]) == Int16.Parse(oldValues[CSV.MONTH])) &&
-                (Int16.Parse(values[CSV.YEAR]) == Int16.Parse(oldValues[CSV.YEAR])) &&
-                (Int16.Parse(values[CSV.HOUR]) == Int16.Parse(oldValues[CSV.HOUR])) &&
-                (Int16.Parse(values[CSV.MINUTE]) == Int16.Parse(oldValues[CSV.MINUTE]))
-                )
-            {   // repeat transmission, so return false
-                Console.WriteLine("Repeat transmission");
+            if (dataIsRepeat(values, oldValues))
                 return false;
-            }
 
             // set the new day and month flags by comparing the new values
             // with the last line of the csv file
             newDay = (Int16.Parse(values[CSV.DAY]) != Int16.Parse(oldValues[CSV.DAY]));
             newMonth = (Int16.Parse(values[CSV.MONTH]) != Int16.Parse(oldValues[CSV.MONTH]));
-
-            if (newMonth) 
+            if (newMonth)
                 newDay = true;          // new month must be new day, even if same day number!
-                                        
+
             averagemAH = calculateAverage(Int16.Parse(values[CSV.DAY]));
 
             //check for gap due to car data not being received
+            checkForGap(values, oldValues); // sets gapFlag and gapCount
+                                            // 
+            return true; // show a new data point
+        }
+
+        private static void checkForGap(string[] values, string[] oldValues)
+        {
             if (newDay)
             {   // just check minutes since midnight
                 gapCount = (Int16.Parse(values[CSV.HOUR]) * 60 + Int16.Parse(values[CSV.MINUTE])) / 15;
@@ -207,30 +148,23 @@ namespace CarBatteryLog
                 Console.WriteLine("Gap count = " + gapCount.ToString());
 
             gapDay = Int16.Parse(values[CSV.GAP_DAY]) != 0;
-
-            if (gapDay)
-                Console.WriteLine("Gap day!");  
-
-            if (newDay)
-            {   // set up the string for the day record
-                if (gapDay) // check if car has moved
-                    dayRecord = String.Format("* ");     // add marker to day record
-                else
-                    dayRecord = String.Format("");
-
-                dayRecord += String.Format("{0,2}/{1}/{2} ", oldValues[CSV.DAY], oldValues[CSV.MONTH].Trim(),
-                                          oldValues[CSV.YEAR].Trim());     // day/ month/ year
-                dayRecord += String.Format("Battery = {0:##.00}V ", Int16.Parse(oldValues[CSV.V1]) / 100.0);       // voltage
-                dayRecord += String.Format("Charge level = {0, 3}% ", calculatePercentage(Int16.Parse(oldValues[CSV.V1])));
-                dayRecord += String.Format("Peak Solar current = {0,6:0.0}mA, Solar charge = {1,4:####}mAH",
-                                            (Int16.Parse(oldValues[CSV.C1PEAK]) / 10.0), oldValues[CSV.mAH].ToString().Trim());
-
-                dayRecord += String.Format(" Running average = {0,4}mAH", averagemAH);
-
-                updateThisMonthFile(oldValues);                      
-            }
-            return true; // show a new data point
         }
+
+        private static bool dataIsRepeat(string[] values, string[] oldValues)
+        {   // returns true if csv data is a repeat
+            if ((Int16.Parse(values[CSV.DAY]) == Int16.Parse(oldValues[CSV.DAY])) &&
+                (Int16.Parse(values[CSV.MONTH]) == Int16.Parse(oldValues[CSV.MONTH])) &&
+                (Int16.Parse(values[CSV.YEAR]) == Int16.Parse(oldValues[CSV.YEAR])) &&
+                (Int16.Parse(values[CSV.HOUR]) == Int16.Parse(oldValues[CSV.HOUR])) &&
+                (Int16.Parse(values[CSV.MINUTE]) == Int16.Parse(oldValues[CSV.MINUTE]))
+                )
+            {   // repeat transmission, so return true
+                Console.WriteLine("Repeat transmission");
+                return true;
+            }
+            return false;  // not a repeat
+        }
+
         static int calculateAverage(int today)
         { // returns the average of the mAH for the last DAYS 
             int average = 0;
