@@ -20,9 +20,6 @@ namespace CarBatteryLog
                     // create a new today file
                     createNewTodayFile(message);
 
-                    // thismonth file updated with yesterday's data in newDayNewMonthCheck
-                    //          updateThisMonthFile();
-
                     if (newMonth)
                         updateLastMonthFile();
                 }

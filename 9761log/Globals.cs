@@ -27,7 +27,7 @@ namespace CarBatteryLog
         static string soilHeader = "";     // gets set in makeSoilString 
         const int maxNoOfUnits = 8;            // the maximum number of soil monitoring units
         static string[] unitNames = new string[maxNoOfUnits + 1];
-        static string[] oldValues;
+ //       static string[] oldValues;
 
         static bool gapDay = false;         // set for a day if there is a gap in the record
         static int gapCount = 0;            // the number of gaps in the current record    

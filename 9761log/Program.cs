@@ -7,7 +7,7 @@ namespace CarBatteryLog
     partial class Program
     {
         const bool supressUDPresponse = true;      // set to true for testing to stop UDP response duplication
-        const string version = "3";
+        const string version = "4";
 
         static void Main()
         {
