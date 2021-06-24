@@ -57,6 +57,14 @@ namespace CarBatteryLog
         public const int SOIL5 = 16;
         public const int SOIL6 = 17;
         public const int SOIL7 = 18;
+        public const int SOIL_VOLTAGE1 = 19;
+        public const int SOIL_VOLTAGE2 = 20;
+        public const int SOIL_VOLTAGE3 = 21;
+        public const int SOIL_VOLTAGE4 = 22;
+        public const int SOIL_VOLTAGE5 = 23;
+        public const int SOIL_VOLTAGE6 = 24;
+        public const int SOIL_VOLTAGE7 = 25;
+        public const int CSV_DATA_ELEMENTS = 30;        // allow a bit of padding!
     }
     public static class current
     {

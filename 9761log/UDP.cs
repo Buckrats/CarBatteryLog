@@ -216,7 +216,7 @@ namespace CarBatteryLog
         static string readLineBackwards(FileStream fs)
         {   // returns a string containing the line
             bool notFound = true;
-            const int DATA_SIZE = 100;
+            const int DATA_SIZE = CSV.CSV_DATA_ELEMENTS * 6 ;   // allow 4 chars + comma and space for each element
             int count = DATA_SIZE;      // start at end of array
             byte[] buffer = new byte[1];  // used to read each byte from file
             byte[] data = new byte[DATA_SIZE + 1];
