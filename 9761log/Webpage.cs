@@ -224,7 +224,7 @@ namespace CarBatteryLog
             dayLine += String.Format("<td>{0,4}mAH</td>", averagemAH);
 
             for(int i = 0; i < tubCount; i++)
-                dayLine += String.Format("<td>{0,3}%</td>", Int16.Parse(values[CSV.SOIL1 + i]));
+                dayLine += String.Format("<td>{0,3}% {1:0.00}V</td>", Int16.Parse(values[CSV.SOIL1 + i]), Int16.Parse(values[CSV.SOIL_VOLTAGE1 + i])/ 1000.0 );
 
             return dayLine;
         }

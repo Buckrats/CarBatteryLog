@@ -35,6 +35,8 @@ namespace CarBatteryLog
 
         private static void updateSoilHistoryFile(string[] values)
         {
+            int tubCount = getUnitNames();
+
             try
             {   // check number of lines in file
                 var lines = File.ReadAllLines(@soilHistoryFile);
@@ -48,12 +50,14 @@ namespace CarBatteryLog
                     unitNames[0], unitNames[1], unitNames[2], unitNames[3]);
                 File.WriteAllText(soilHistoryHeader, header);
 
-                string temp = String.Format("<tr><td>{0:00}/{1:00}/{2}  {3:00}:{4:00}<td>{5}%</td><td>{6}%</td><td>{7}%</td><td>{8}%</td></tr>",
+                string temp = String.Format("<tr><td>{0:00}/{1:00}/{2}  {3:00}:{4:00}</td>",
                     values[CSV.DAY], values[CSV.MONTH].Trim(), values[CSV.YEAR].Trim(),
-                    values[CSV.HOUR].Trim(), Int16.Parse(values[CSV.MINUTE]),
-                    Int16.Parse(values[CSV.SOIL1]), Int16.Parse(values[CSV.SOIL2]),
-                    Int16.Parse(values[CSV.SOIL3]), Int16.Parse(values[CSV.SOIL4])
-                    );
+                    values[CSV.HOUR].Trim(), Int16.Parse(values[CSV.MINUTE]) );
+
+                for (int i = 0; i < tubCount; i++)
+                    temp += String.Format("<td>{0,3}% {1:0.00}V</td>", Int16.Parse(values[CSV.SOIL1 + i]), Int16.Parse(values[CSV.SOIL_VOLTAGE1 + i]) / 1000.0);
+
+                temp += "</tr>";
                 File.AppendAllText(@soilHistoryFile, temp + Environment.NewLine);
             }
             catch (Exception e)

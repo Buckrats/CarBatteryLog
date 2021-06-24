@@ -7,7 +7,7 @@ namespace CarBatteryLog
     partial class Program
     {
         const bool supressUDPresponse = false;      // set to true for testing to stop UDP response duplication
-        const string version = "5";
+        const string version = "6";
 
         static void Main()
         {
@@ -29,8 +29,9 @@ namespace CarBatteryLog
                 {   // normally used for testing only 
                    // string str = "1, 5, 21, 6, 15, 1296, 326, 516, 316, 794, 1855, 0, 34, 35, 36, 37";
                     Console.WriteLine("Received char " + input.ToString() + " version " + version);
+                    string[] oldValues = readLastCsvLineValues();
+                    updateSoilHistoryFile(oldValues);
 
-                    
                 }
             }
         }     

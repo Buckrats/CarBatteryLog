@@ -7,7 +7,7 @@ namespace CarBatteryLog
         private const int listenPort1 = 40030;
         private const int responsePort = 40031;
 
-        const string directory = ""; // N:/CarBatteryLog/temp/";
+        const string directory = "N:/CarBatteryLog/temp/";
         const string logFile = "logCarBattery.csv";     // name of log file - must exist already to be used
         const string todayFile = "today.txt";           // name of web page include file
         const string yesterdayFile = "yesterday.txt";   // name of web page include file
