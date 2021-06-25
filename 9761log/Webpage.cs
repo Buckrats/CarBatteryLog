@@ -198,12 +198,12 @@ namespace CarBatteryLog
 
         private static string createHeaderLineString(int tubCount)
         {
-            String headerLine = String.Format("<tr><th width =\"5 % \">Date</th ><th width =\"5 % \">Car Moved</th ><th width =\"5 % \">Battery Voltage </th>");
-            headerLine += String.Format("<th width = \"5 % \">Charge State</th><th width = \"5 % \">Peak Solar Current</th>");
-            headerLine += String.Format("<th width =\"5 % \" >Day's Charge</th><th width =\"5 % \" >Average Charge</th>");
+            String headerLine = String.Format("<tr><th class=\"date\">Date</th ><th class=\"moved\">Car Moved</th ><th class=\"batt\">Battery Voltage </th>");
+            headerLine += String.Format("<th class=\"batt\">Charge State</th><th class=\"batt\">Peak Solar Current</th>");
+            headerLine += String.Format("<th class=\"batt\">Day's Charge</th><th class=\"batt\">Average Charge</th>");
 
             for (int i = 0; i < tubCount; i++)
-                headerLine += String.Format("<th width =\"5 % \" >{0}</th >", unitNames[i]);
+                headerLine += String.Format("<th class=\"soil\">{0}</th >", unitNames[i]);
             return headerLine;
         }
 

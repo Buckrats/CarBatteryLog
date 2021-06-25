@@ -7,7 +7,7 @@ namespace CarBatteryLog
     partial class Program
     {
         const bool supressUDPresponse = false;      // set to true for testing to stop UDP response duplication
-        const string version = "6";
+        const string version = "7";
         const string directory = ""; //"N:/CarBatteryLog/temp/";
 
         static void Main()
