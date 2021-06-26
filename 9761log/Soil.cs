@@ -55,7 +55,7 @@ namespace CarBatteryLog
                     values[CSV.HOUR].Trim(), Int16.Parse(values[CSV.MINUTE]) );
 
                 for (int i = 0; i < tubCount; i++)
-                    temp += String.Format("<td>{0,3}% {1:0.00}V</td>", Int16.Parse(values[CSV.SOIL1 + i]), Int16.Parse(values[CSV.SOIL_VOLTAGE1 + i]) / 1000.0);
+                    temp += String.Format("<td><b>{0,3}% </b>{1:0.00}V</td>", Int16.Parse(values[CSV.SOIL1 + i]), Int16.Parse(values[CSV.SOIL_VOLTAGE1 + i]) / 1000.0);
 
                 temp += "</tr>";
                 File.AppendAllText(@soilHistoryFile, temp + Environment.NewLine);
