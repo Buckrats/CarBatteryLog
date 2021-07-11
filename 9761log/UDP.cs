@@ -114,6 +114,10 @@ namespace CarBatteryLog
             if (Int16.Parse(values[CSV.DAY]) * Int16.Parse(values[CSV.MONTH]) * Int16.Parse(values[CSV.YEAR]) == 0)
                 return false;     // valid day month or year can't be zero
 
+            if (Int16.Parse(values[CSV.DAY]) > 31) return false;
+            if (Int16.Parse(values[CSV.MONTH]) > 12) return false;
+            if (Int16.Parse(values[CSV.YEAR]) > 99) return false;
+
             // check for repeat
             if ((Int16.Parse(values[CSV.DAY]) == Int16.Parse(oldValues[CSV.DAY])) &&
                 (Int16.Parse(values[CSV.MONTH]) == Int16.Parse(oldValues[CSV.MONTH])) &&
