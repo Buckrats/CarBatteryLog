@@ -33,7 +33,7 @@ namespace CarBatteryLog
                     log(csvData);       // valid data so write raw data to the CSV log file                    
 
                     if (newDay)
-                        updateThisMonthFile(oldValues);     // write the last line of yesterday to the this month file
+                        updateThisMonthFile(readLastButTwoCsvLineValues());     // write the next to last line of yesterday to the this month file
 
                     // add latest row to web page
                     String dataLineString = makePrintString(newValues);
@@ -270,7 +270,38 @@ namespace CarBatteryLog
             return (int)(100 * result);
         }
 
-        // end of class
+        private static string[] readLastButTwoCsvLineValues()
+        {   // get the next to last line of the csv file
+            string[] values = null;           
+
+            try
+            {
+                //   string[] values = new string[15];
+                using (FileStream fs = new FileStream(@logFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    // start at next to last byte ( since last is typically a linefeed).
+                    fs.Seek(0, SeekOrigin.End);
+                    fs.Seek(-1, SeekOrigin.Current);
+
+                    readLineBackwards(fs);
+                    readLineBackwards(fs);
+                    string tempString = readLineBackwards(fs);                    
+                   
+                    values = tempString.Split(',');
+                    if (values[0] == "")
+                    {
+                        Console.WriteLine("csv line is blank");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                Console.WriteLine("Error in readNextToLastCsvLineValues...");
+            }
+            return values;
+        }
+    // end of class
     }
     // end of namespace
 }
